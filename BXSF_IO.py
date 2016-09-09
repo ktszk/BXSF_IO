@@ -13,8 +13,13 @@ class Flag(object):
             pass
 
 def read_bxsf(filename):
-    import numpy as np
-    if isinstance(filename,str):
+    try:
+        f=open(filename,'r')
+    except:
+        print "Error: Cannot open file"
+    else:
+        f.close()
+        import numpy as np
         count=0
         axis=[0.]*3
         info=Flag('INFO')
@@ -30,7 +35,7 @@ def read_bxsf(filename):
                     EF=float(tmp.split(':')[1])
             if block_bandgrid_3d.flag:
                 if (not bandgrid_3d_fermi.flag) and f.find('BANDGRID_3D')==-1:
-                    index=f
+                    index=f.strip()
             if bandgrid_3d_fermi.flag:
                 if count==0:
                     pass
@@ -60,8 +65,6 @@ def read_bxsf(filename):
         axis=np.array(axis)
         E_list=np.array(E_list)
         return(axis,E_list,index,EF,center,k_list)
-    else:
-        print "Error: filename's type is string"
 
 class Bxsf_data():
     __slots__=['axis','E_list','index','EF','center','k_list']
@@ -80,8 +83,25 @@ class Bxsf_data():
             pass
     def out_bxsf(self,filename):
         try:
-            f=open(filename,'r')
+            f=open(filename,'w')
         except:
             print 'Cannot open file'
         else:
+            f.write('  BEGIN_INFO\n'
+                    +'       Fermi Energy: %23.15E\n'%self.EF
+                    +'  END_INFO\n\n')
+            f.write('  BEGIN_BLOCK_BANDGRID_3D\n'
+                    +'       %s\n'%self.index
+                    +'  BEGIN_BANDGRID_3D_fermi\n'
+                    +'         %d\n'%len(self.E_list)
+                    +'         %d       %d       %d\n'%tuple( i+1 for i in self.k_list[-1])
+                    +'    %16.14f  %16.14f  %16.14f\n'%tuple(self.center))
+            for a in self.axis:
+                f.write('    %16.14f  %16.14f  %16.14f\n'%tuple(a))
+            for i,El in enumerate(self.E_list):
+                f.write('    BAND: %9s%d\n'%('',i+1))
+                for e in El:
+                    f.write('      %15.8E\n'%e)
+            f.write('  END_BANDGRID_3D\n'
+                    +'  END_BLOCK_BANDGRID_3D\n')
             f.close()
