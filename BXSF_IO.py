@@ -1,27 +1,25 @@
 #!/usr/bin/env python
-# -*- coding:utf-8
-class BXSF_IO(object):
-    def __init__(self):
-        self.axis=[[]]*3
-        self.E_list=[]
-        self.EF=0
-    class Flag(object):
-        def __init__(self,flag_char):
+# -*- coding:utf-8 -*-
+class Flag(object):
+    def __init__(self,flag_char):
+        self.flag=False
+        self.flag_char=flag_char
+    def flag_switch(self,fline):
+        if fline.find('BEGIN_'+self.flag_char)!=-1:
+            self.flag=True
+        elif fline.find('END_'+self.flag_char)!=-1:
             self.flag=False
-            self.flag_char=flag_char
-        def flag_switch(self,fline):
-            if fline.find('BEGIN_'+self.flag_char)!=-1:
-                self.flag=True
-            elif fline.find('END_'+self.flag_char)!=-1:
-                self.flag=False
-            else:
-                pass
-    def read_bxsf(self,filename):
-        import numpy as np
+        else:
+            pass
+
+def read_bxsf(filename):
+    import numpy as np
+    if isinstance(filename,str):
         count=0
-        info=self.Flag('INFO')
-        block_bandgrid_3d=self.Flag('BLOCK_BANDGRID_3D')
-        bandgrid_3d_fermi=self.Flag('BANDGRID_3D')
+        axis=[0.]*3
+        info=Flag('INFO')
+        block_bandgrid_3d=Flag('BLOCK_BANDGRID_3D')
+        bandgrid_3d_fermi=Flag('BANDGRID_3D')
         for f in open(filename,'r'):
             info.flag_switch(f)
             block_bandgrid_3d.flag_switch(f)
@@ -29,31 +27,61 @@ class BXSF_IO(object):
             if info.flag:
                 tmp=f.split('#')[0]
                 if tmp.find('Fermi Energy')!=-1:
-                    self.EF=float(tmp.split(':')[1])
+                    EF=float(tmp.split(':')[1])
             if block_bandgrid_3d.flag:
-                pass
+                if (not bandgrid_3d_fermi.flag) and f.find('BANDGRID_3D')==-1:
+                    index=f
             if bandgrid_3d_fermi.flag:
                 if count==0:
                     pass
                 elif count==1:
                     num_bands=int(f)
-                    self.E_list=[[]]*num_bands
+                    E_list=[[] for i in range(num_bands)]
                 elif count==2:
                     tmp=f.split()
-                    num_k=[int(t) for t in tmp]
+                    a,b,c=(int(t) for t in tmp)
+                    sumk=a*b*c
+                    k_list=np.array([[l%c,l%(c*b)//c ,l//(c*b)]
+                                     for l in range(sumk)])
                 elif count==3:
                     tmp=f.split()
                     center=[float(t) for t in tmp]
                 elif 3<count<7:
                     tmp=f.split()
-                    self.axis[count-4]=[float(t) for t in tmp]
+                    axis[count-4]=[float(t) for t in tmp]
                 else:
                     if f.find('BAND:')!=-1:
                         tmp=f.split(':')
                         n_band=int(tmp[1])-1
                     else:
                         tmp=float(f)
-                        self.E_list[n_band].append(tmp)
+                        E_list[n_band].append(tmp)
                 count=count+1
-        self.axis=np.array(self.axis)
-        self.Elist=np.array(self.Elist)
+        axis=np.array(axis)
+        E_list=np.array(E_list)
+        return(axis,E_list,index,EF,center,k_list)
+    else:
+        print "Error: filename's type is string"
+
+class Bxsf_data():
+    __slots__=['axis','E_list','index','EF','center','k_list']
+    def __init__(self,axis=[0.]*3,elist=[],index='',ef=0.0,center=[0.,0.,0.],klist=[]):
+        self.axis=axis
+        self.E_list=elist
+        self.index=index
+        self.EF=ef
+        self.center=center
+        self.k_list=klist
+    def read_bxsf(self,filename):
+        try:
+            (self.axis,self.E_list,self.index,
+             self.EF,self.center,self.k_list)=read_bxsf(filename)
+        except TypeError:
+            pass
+    def out_bxsf(self,filename):
+        try:
+            f=open(filename,'r')
+        except:
+            print 'Cannot open file'
+        else:
+            f.close()
