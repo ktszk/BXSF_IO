@@ -25,6 +25,8 @@ def read_bxsf(filename):
         info=Flag('INFO')
         block_bandgrid_3d=Flag('BLOCK_BANDGRID_3D')
         bandgrid_3d_fermi=Flag('BANDGRID_3D')
+        nband=-1
+        band_num=[]
         for f in open(filename,'r'):
             info.flag_switch(f)
             block_bandgrid_3d.flag_switch(f)
@@ -57,27 +59,29 @@ def read_bxsf(filename):
                 else:
                     if f.find('BAND:')!=-1:
                         tmp=f.split(':')
-                        n_band=int(tmp[1])-1
+                        nband=nband+1
+                        band_num.append(int(tmp[1]))
                     else:
-                        tmp=float(f)
-                        E_list[n_band].append(tmp)
+                        tmp=[float(ff) for ff in f.split()]
+                        E_list[nband]=E_list[nband]+tmp
                 count=count+1
         axis=np.array(axis)
         E_list=np.array(E_list)
-        return(axis,E_list,index,EF,center,k_list)
+        return(axis,E_list,band_num,index,EF,center,k_list)
 
 class Bxsf_data():
-    __slots__=['axis','E_list','index','EF','center','k_list']
-    def __init__(self,axis=[0.]*3,elist=[],index='',ef=0.0,center=[0.,0.,0.],klist=[]):
+    __slots__=['axis','E_list','band_num','index','EF','center','k_list']
+    def __init__(self,axis=[0.]*3,elist=[],bnum=[],index='',ef=0.0,center=[0.,0.,0.],klist=[]):
         self.axis=axis
         self.E_list=elist
+        self.band_num=bnum
         self.index=index
         self.EF=ef
         self.center=center
         self.k_list=klist
     def read_bxsf(self,filename):
         try:
-            (self.axis,self.E_list,self.index,
+            (self.axis,self.E_list,self.band_num,self.index,
              self.EF,self.center,self.k_list)=read_bxsf(filename)
         except TypeError:
             pass
