@@ -1,25 +1,24 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-class Flag(object):
-    def __init__(self,flag_char):
-        self.flag=False
-        self.flag_char=flag_char
-    def flag_switch(self,fline):
-        if fline.find('BEGIN_'+self.flag_char)!=-1:
-            self.flag=True
-        elif fline.find('END_'+self.flag_char)!=-1:
-            self.flag=False
-        else:
-            pass
-
+import numpy as np
 def read_bxsf(filename):
+    class Flag(object):
+        def __init__(self,flag_char):
+            self.flag=False
+            self.flag_char=flag_char
+        def flag_switch(self,fline):
+            if fline.find('BEGIN_'+self.flag_char)!=-1:
+                self.flag=True
+            elif fline.find('END_'+self.flag_char)!=-1:
+                self.flag=False
+            else:
+                pass
     try:
         f=open(filename,'r')
     except:
         print "Error: Cannot open file"
     else:
         f.close()
-        import numpy as np
         count=0
         axis=[0.]*3
         info=Flag('INFO')
@@ -84,7 +83,7 @@ class Bxsf_data():
             (self.axis,self.E_list,self.band_num,self.index,
              self.EF,self.center,self.k_list)=read_bxsf(filename)
         except TypeError:
-            pass
+            print('cannot read %s'%filename)
     def out_bxsf(self,filename):
         try:
             f=open(filename,'w')
@@ -109,3 +108,22 @@ class Bxsf_data():
             f.write('  END_BANDGRID_3D\n'
                     +'  END_BLOCK_BANDGRID_3D\n')
             f.close()
+    def obtain_EF_band(self):
+        cross_band=[]
+        for e1 in self.E_list:
+            if(max(e1)>self.EF and min(e1)<self.EF):
+                cross_band.append(e1)
+        cross_band=np.array(cross_band)
+        return(cross_band)
+    def get_2D_Fermi_data(self,kz):
+        cross_band=self.obtain_EF_band()
+        E_kz=[[]]*len(cross_band)
+        k_kz=[[]]*len(cross_band)
+        for j,ce in enumerate(cross_band):
+            for i,e in enumerate(ce):
+                if self.k_list[i][0]==kz:
+                    E_kz[j]=E_kz[j]+[e-self.EF]
+                    k_kz[j]=k_kz[j]+list([self.k_list[i]])
+        E_kz=np.array(E_kz)
+        k_kz=np.array(k_kz)
+        return(E_kz,k_kz)
