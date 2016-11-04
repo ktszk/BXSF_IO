@@ -68,7 +68,7 @@ def read_bxsf(filename):
         E_list=np.array(E_list)
         return(axis,E_list,band_num,index,EF,center,k_list)
 
-class Bxsf_data():
+class data():
     __slots__=['axis','E_list','band_num','index','EF','center','k_list']
     def __init__(self,axis=[0.]*3,elist=[],bnum=[],index='',ef=0.0,center=[0.,0.,0.],klist=[]):
         self.axis=axis
@@ -78,7 +78,7 @@ class Bxsf_data():
         self.EF=ef
         self.center=center
         self.k_list=klist
-    def read_bxsf(self,filename):
+    def read_data(self,filename):
         try:
             (self.axis,self.E_list,self.band_num,self.index,
              self.EF,self.center,self.k_list)=read_bxsf(filename)
